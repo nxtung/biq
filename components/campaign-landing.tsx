@@ -1,9 +1,22 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useTheme } from "next-themes"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Apple, Play, Smartphone } from "lucide-react"
+
+function ThemeAwareCampaignLogo() {
+  const { theme } = useTheme()
+  const logoSrc = theme === "dark" ? "/icon.svg" : "/icon.svg"
+
+  return (
+    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-primary p-3">
+      <Image key={logoSrc} src={logoSrc} alt="Amio Logo" width={80} height={80} className="h-full w-full" />
+    </div>
+  )
+}
 
 interface CampaignLandingProps {
   campaignId: string
@@ -121,8 +134,8 @@ export function CampaignLanding({
           <Card className="border-0 shadow-lg">
             <CardContent className="p-6 text-center">
               {/* App icon */}
-              <div className="w-20 h-20 mx-auto mb-6 bg-foreground text-background rounded-2xl flex items-center justify-center">
-                <span className="text-3xl font-bold">A</span>
+              <div className="w-20 h-20 mx-auto mb-6">
+                <ThemeAwareCampaignLogo />
               </div>
 
               <h1 className="text-2xl font-bold mb-2">{campaignName}</h1>

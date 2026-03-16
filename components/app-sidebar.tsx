@@ -1,6 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
+import { ThemeAwareSidebarLogo } from "@/components/theme-aware-sidebar-logo" // Import the new component
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import {
@@ -86,11 +88,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="inset">
-      <SidebarHeader>
+      <SidebarHeader> {/* Thêm p-1 để icon không bị sát cạnh */}
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-            A
-          </div>
+          <ThemeAwareSidebarLogo />
           <div className="flex flex-col">
             <span className="font-semibold text-sm">AmioTrack</span>
             <span className="text-xs text-muted-foreground">Campaign Tracking</span>
