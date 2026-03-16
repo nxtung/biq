@@ -9,10 +9,10 @@ import { Apple, Play, Smartphone } from "lucide-react"
 
 function ThemeAwareCampaignLogo() {
   const { theme } = useTheme()
-  const logoSrc = theme === "dark" ? "/icon.svg" : "/icon.svg"
+  const logoSrc = theme === "dark" ? "/icon-dark.svg" : "/icon-light.svg"
 
   return (
-    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-primary p-3">
+    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-primary">
       <Image key={logoSrc} src={logoSrc} alt="Amio Logo" width={80} height={80} className="h-full w-full" />
     </div>
   )
