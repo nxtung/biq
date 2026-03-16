@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { db, installs } from "@/lib/db"
-import { sql, isNotNull } from "drizzle-orm"
+import { isNotNull, count, desc } from "drizzle-orm"
 
 export async function GET() {
   try {
@@ -10,16 +10,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get installs grouped by province
+    // To avoid issues with raw SQL in the new driver, we use Drizzle's `count()` helper.
     const results = await db
       .select({
         province: installs.province,
-        count: sql<number>`count(*)`.as("count"),
+        count: count(),
       })
       .from(installs)
       .where(isNotNull(installs.province))
       .groupBy(installs.province)
-      .orderBy(sql`count(*) desc`)
+      .orderBy(desc(count()))
 
     const data = results.map((row) => ({
       province: row.province || "Không xác định",

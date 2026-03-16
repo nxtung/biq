@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { db, installs, campaignSources } from "@/lib/db"
-import { sql, eq } from "drizzle-orm"
+import { sql, eq, count, desc } from "drizzle-orm"
 
 const SOURCE_LABELS: Record<string, string> = {
   facebook: "Facebook",
@@ -26,16 +26,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get installs grouped by source type
+    // To avoid issues with raw SQL in the new driver, we use Drizzle's `count()` helper.
     const results = await db
       .select({
         sourceType: campaignSources.sourceType,
-        count: sql<number>`count(*)`.as("count"),
+        count: count(),
       })
       .from(installs)
       .innerJoin(campaignSources, eq(installs.sourceId, campaignSources.id))
       .groupBy(campaignSources.sourceType)
-      .orderBy(sql`count(*) desc`)
+      .orderBy(desc(count()))
       .limit(10)
 
     const data = results.map((row) => ({

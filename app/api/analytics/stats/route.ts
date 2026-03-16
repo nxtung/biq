@@ -11,7 +11,8 @@ export async function GET() {
   }
 
   try {
-    // Run all count queries in a single, more efficient database round-trip
+    // A recent update to the database driver requires a new syntax for raw SQL queries.
+    // We now use sql tagged template literal for raw SQL strings with Drizzle table references.
     const result = await db.execute(sql`
       SELECT
         (SELECT count(*)::int FROM ${campaigns} WHERE ${campaigns.status} = 'active') as "totalCampaigns",

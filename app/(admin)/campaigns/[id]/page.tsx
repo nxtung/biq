@@ -8,7 +8,7 @@ import { Campaign, CampaignSource, Click, Install, InstallToken } from "@/lib/db
 import { PageHeader, PageHeaderDescription, PageHeaderHeading } from "@/components/ui/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Copy, MoreHorizontal, Pencil, Plus, QrCode, Trash2, Eye } from "lucide-react"
 import { toast } from "sonner"
+import { isValid, parseISO } from 'date-fns';
 import { SourceDialog } from "@/components/source-dialog"
 import { DeleteSourceDialog } from "@/components/delete-source-dialog"
 import { QRCodeDialog } from "@/components/qr-code-dialog"
@@ -45,6 +46,21 @@ interface CampaignWithStats extends Campaign {
     totalInstalls: number
     conversionRate: number
   }
+}
+
+// Utility function to safely format dates (moved from previous turn's suggestion)
+function formatSafeDate(dateInput: Date | string | null | undefined, formatStr: string): string {
+  if (dateInput === null || dateInput === undefined) {
+    return 'N/A'; // Or any other placeholder string you prefer
+  }
+
+  let date: Date;
+  if (typeof dateInput === 'string') {
+    date = parseISO(dateInput);
+  } else {
+    date = dateInput;
+  }
+  return isValid(date) ? format(date, formatStr, { locale: vi }) : 'Invalid Date';
 }
 
 interface CampaignSourcesTableProps {
@@ -395,7 +411,7 @@ export default function CampaignDetailPage() {
             <CardHeader><CardTitle>Thông tin chi tiết</CardTitle></CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-4 text-sm">
               <div><span className="font-medium">ID:</span> <code className="text-muted-foreground">{campaign.id}</code></div>
-              <div><span className="font-medium">Ngày tạo:</span> <span className="text-muted-foreground">{format(new Date(campaign.createdAt), "dd/MM/yyyy HH:mm", { locale: vi })}</span></div>
+              <div><span className="font-medium">Ngày tạo:</span> <span className="text-muted-foreground">{formatSafeDate(campaign.createdAt, "dd/MM/yyyy HH:mm")}</span></div>
               <div><span className="font-medium">Link iOS:</span> <a href={campaign.iosLink || '#'} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">{campaign.iosLink || "Chưa có"}</a></div>
               <div><span className="font-medium">Link Android:</span> <a href={campaign.androidLink || '#'} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">{campaign.androidLink || "Chưa có"}</a></div>
             </CardContent>
@@ -403,9 +419,9 @@ export default function CampaignDetailPage() {
           <Card>
             <CardHeader><CardTitle>Hiệu suất</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-3 gap-4">
-              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">Lượt click</p><p className="text-3xl font-bold">{campaign.stats.totalClicks.toLocaleString('vi-VN')}</p></div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">Lượt cài đặt</p><p className="text-3xl font-bold">{campaign.stats.totalInstalls.toLocaleString('vi-VN')}</p></div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">Tỷ lệ chuyển đổi</p><p className="text-3xl font-bold">{campaign.stats.conversionRate.toFixed(1)}%</p></div>
+              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">Lượt click</p><p className="text-3xl font-bold">{(campaign.stats?.totalClicks ?? 0).toLocaleString('vi-VN')}</p></div>
+              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">Lượt cài đặt</p><p className="text-3xl font-bold">{(campaign.stats?.totalInstalls ?? 0).toLocaleString('vi-VN')}</p></div>
+              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50"><p className="text-sm text-muted-foreground">Tỷ lệ chuyển đổi</p><p className="text-3xl font-bold">{(campaign.stats?.conversionRate ?? 0).toFixed(1)}%</p></div>
             </CardContent>
           </Card>
         </TabsContent>

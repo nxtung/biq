@@ -14,31 +14,31 @@ export async function GET() {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    // Combine queries for installs and clicks into a single DB round-trip using CTEs and a FULL OUTER JOIN
+    // Use sql template literal for raw SQL queries in Drizzle
     const query = sql`
-      WITH daily_installs AS (
-        SELECT
-          date_trunc('day', ${installs.installedAt})::date AS date,
-          count(*)::int AS installs_count
-        FROM ${installs}
-        WHERE ${installs.installedAt} >= ${thirtyDaysAgo}
-        GROUP BY 1
-      ),
-      daily_clicks AS (
-        SELECT
-          date_trunc('day', ${clicks.clickedAt})::date AS date,
-          count(*)::int AS clicks_count
-        FROM ${clicks}
-        WHERE ${clicks.clickedAt} >= ${thirtyDaysAgo}
-        GROUP BY 1
-      )
-      SELECT
-        COALESCE(di.date, dc.date) AS date,
-        COALESCE(di.installs_count, 0) AS installs,
-        COALESCE(dc.clicks_count, 0) AS clicks
-      FROM daily_installs di
-      FULL OUTER JOIN daily_clicks dc ON di.date = dc.date;
-    `
+  WITH daily_installs AS (
+    SELECT
+      date_trunc('day', "installs"."installed_at")::date AS date,
+      count(*)::int AS installs_count
+    FROM "installs"
+    WHERE "installs"."installed_at" >= ${thirtyDaysAgo}
+    GROUP BY 1
+  ),
+  daily_clicks AS (
+    SELECT
+      date_trunc('day', "clicks"."clicked_at")::date AS date,
+      count(*)::int AS clicks_count
+    FROM "clicks"
+    WHERE "clicks"."clicked_at" >= ${thirtyDaysAgo}
+    GROUP BY 1
+  )
+  SELECT
+    COALESCE(di.date, dc.date) AS date,
+    COALESCE(di.installs_count, 0) AS installs,
+    COALESCE(dc.clicks_count, 0) AS clicks
+  FROM daily_installs di
+  FULL OUTER JOIN daily_clicks dc ON di.date = dc.date
+`
     const result = await db.execute(query)
     const combinedData = result.rows as { date: Date; installs: number; clicks: number }[]
 
