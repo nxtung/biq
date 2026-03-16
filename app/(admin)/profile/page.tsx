@@ -31,7 +31,7 @@ export default function ProfilePage() {
     e.preventDefault()
     setIsSubmittingInfo(true)
     try {
-      const res = await fetch(`/api/users/${user?.id}`, {
+      const res = await fetch(`/api/auth/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email }),
@@ -41,7 +41,9 @@ export default function ProfilePage() {
         throw new Error(data.error || "Failed to update profile")
       }
       toast.success("Cập nhật thông tin thành công")
-      refresh() // Refresh user data in auth context
+      // Gọi hàm refresh từ AuthContext để lấy lại thông tin người dùng mới nhất
+      // từ session đã được cập nhật ở backend.
+      await refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Đã có lỗi xảy ra")
     } finally {

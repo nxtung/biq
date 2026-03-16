@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { db, installs, clicks } from "@/lib/db"
 import { sql } from "drizzle-orm"
+import { parseISO } from "date-fns" // Import parseISO để chuyển đổi chuỗi ngày tháng
 
 export async function GET() {
   try {
@@ -39,12 +40,12 @@ export async function GET() {
   FROM daily_installs di
   FULL OUTER JOIN daily_clicks dc ON di.date = dc.date
 `
-    const result = await db.execute(query)
-    const combinedData = result.rows as { date: Date; installs: number; clicks: number }[]
+    const result = await db.execute(query) // Kết quả từ DB sẽ có trường date là chuỗi
+    const combinedData = result.rows as { date: string; installs: number; clicks: number }[] // Cập nhật kiểu dữ liệu
 
     const dateMap = new Map<string, { installs: number; clicks: number }>()
 
-    // Generate all dates in range
+    // Tạo tất cả các ngày trong phạm vi 30 ngày
     for (let i = 29; i >= 0; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)
@@ -54,7 +55,7 @@ export async function GET() {
 
     // Fill in actual data
     for (const row of combinedData) {
-      const dateStr = row.date.toISOString().split("T")[0]
+      const dateStr = parseISO(row.date).toISOString().split("T")[0] 
       const existing = dateMap.get(dateStr)
       if (existing) {
         existing.installs = row.installs
