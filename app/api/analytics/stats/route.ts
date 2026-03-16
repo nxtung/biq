@@ -1,4 +1,4 @@
-import { db } from "@/lib/db"
+import { db } from "@/lib/db/index"
 import { campaigns, clicks, installs } from "@/lib/db/schema"
 import { getSession } from "@/lib/auth"
 import { sql } from "drizzle-orm"
@@ -12,12 +12,14 @@ export async function GET() {
 
   try {
     // Run all count queries in a single, more efficient database round-trip
-    const totals: { totalCampaigns: number; totalClicks: number; totalInstalls: number; } | undefined = await db.get(sql`
+    const result = await db.execute(sql`
       SELECT
-        (SELECT count(*) FROM ${campaigns} WHERE ${campaigns.status} = 'active') as "totalCampaigns",
-        (SELECT count(*) FROM ${clicks}) as "totalClicks",
-        (SELECT count(*) FROM ${installs}) as "totalInstalls"
+        (SELECT count(*)::int FROM ${campaigns} WHERE ${campaigns.status} = 'active') as "totalCampaigns",
+        (SELECT count(*)::int FROM ${clicks}) as "totalClicks",
+        (SELECT count(*)::int FROM ${installs}) as "totalInstalls"
     `);
+
+    const totals = result.rows[0] as { totalCampaigns: number; totalClicks: number; totalInstalls: number } | undefined;
 
     // Safely access the properties with default values
     const totalCampaigns = totals?.totalCampaigns ?? 0;

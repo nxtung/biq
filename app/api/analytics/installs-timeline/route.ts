@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { db, installs, clicks } from "@/lib/db"
-import { sql, gte } from "drizzle-orm"
+import { sql } from "drizzle-orm"
 
 export async function GET() {
   try {
@@ -14,29 +14,34 @@ export async function GET() {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    // Get installs grouped by date
-    const installsByDate = await db
-      .select({
-        date: sql<string>`date(installed_at / 1000, 'unixepoch')`.as("date"),
-        count: sql<number>`count(*)`.as("count"),
-      })
-      .from(installs)
-      .where(gte(installs.installedAt, thirtyDaysAgo))
-      .groupBy(sql`date(installed_at / 1000, 'unixepoch')`)
-      .orderBy(sql`date(installed_at / 1000, 'unixepoch')`)
+    // Combine queries for installs and clicks into a single DB round-trip using CTEs and a FULL OUTER JOIN
+    const query = sql`
+      WITH daily_installs AS (
+        SELECT
+          date_trunc('day', ${installs.installedAt})::date AS date,
+          count(*)::int AS installs_count
+        FROM ${installs}
+        WHERE ${installs.installedAt} >= ${thirtyDaysAgo}
+        GROUP BY 1
+      ),
+      daily_clicks AS (
+        SELECT
+          date_trunc('day', ${clicks.clickedAt})::date AS date,
+          count(*)::int AS clicks_count
+        FROM ${clicks}
+        WHERE ${clicks.clickedAt} >= ${thirtyDaysAgo}
+        GROUP BY 1
+      )
+      SELECT
+        COALESCE(di.date, dc.date) AS date,
+        COALESCE(di.installs_count, 0) AS installs,
+        COALESCE(dc.clicks_count, 0) AS clicks
+      FROM daily_installs di
+      FULL OUTER JOIN daily_clicks dc ON di.date = dc.date;
+    `
+    const result = await db.execute(query)
+    const combinedData = result.rows as { date: Date; installs: number; clicks: number }[]
 
-    // Get clicks grouped by date
-    const clicksByDate = await db
-      .select({
-        date: sql<string>`date(clicked_at / 1000, 'unixepoch')`.as("date"),
-        count: sql<number>`count(*)`.as("count"),
-      })
-      .from(clicks)
-      .where(gte(clicks.clickedAt, thirtyDaysAgo))
-      .groupBy(sql`date(clicked_at / 1000, 'unixepoch')`)
-      .orderBy(sql`date(clicked_at / 1000, 'unixepoch')`)
-
-    // Merge data
     const dateMap = new Map<string, { installs: number; clicks: number }>()
 
     // Generate all dates in range
@@ -48,17 +53,12 @@ export async function GET() {
     }
 
     // Fill in actual data
-    for (const row of installsByDate) {
-      const existing = dateMap.get(row.date)
+    for (const row of combinedData) {
+      const dateStr = row.date.toISOString().split("T")[0]
+      const existing = dateMap.get(dateStr)
       if (existing) {
-        existing.installs = row.count
-      }
-    }
-
-    for (const row of clicksByDate) {
-      const existing = dateMap.get(row.date)
-      if (existing) {
-        existing.clicks = row.count
+        existing.installs = row.installs
+        existing.clicks = row.clicks
       }
     }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { campaignSources, campaigns } from "@/lib/db/schema"
+import { campaignSources, campaigns, SOURCE_TYPES } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { createId } from "@paralleldrive/cuid2"
 import { z } from "zod"
@@ -8,7 +8,7 @@ import QRCode from "qrcode"
 
 const createSourceSchema = z.object({
   sourceName: z.string().min(1, "Tên nguồn là bắt buộc"),
-  sourceType: z.enum(campaignSources.sourceType.enumValues),
+  sourceType: z.enum(SOURCE_TYPES),
   targetUrl: z.string().url("Link đích không hợp lệ").nullable().optional(),
 })
 

@@ -2,20 +2,26 @@ import { db } from "../lib/db"
 import { users } from "../lib/db/schema"
 import bcrypt from "bcryptjs"
 import { createId } from "@paralleldrive/cuid2"
+import { eq } from "drizzle-orm"
 
 async function main() {
   console.log("🌱 Seeding database...")
 
-  const adminPhone = "0123456789"
-  const adminPassword = "admin"
+  // Lấy thông tin admin từ biến môi trường, nếu không có thì dùng giá trị mặc định
+  const adminPhone = process.env.SEED_ADMIN_PHONE || "0123456789"
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "admin"
+
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is not set. Please check your .env.local file.")
+  }
 
   // Check if admin user already exists
   const existingAdmin = await db.query.users.findFirst({
-    where: (table, { eq }) => eq(table.phone, adminPhone),
+    where: eq(users.phone, adminPhone),
   })
 
   if (existingAdmin) {
-    console.log("✅ Admin user already exists. Seeding skipped.")
+    console.log(`✅ Admin user with phone ${adminPhone} already exists. Seeding skipped.`)
     return
   }
 

@@ -151,7 +151,7 @@ export async function POST(req: Request) {
     // 5. Cập nhật trạng thái của installToken là đã được sử dụng
     await db
       .update(installTokens)
-      .set({ matched: true, updatedAt: new Date() })
+      .set({ matched: true })
       .where(eq(installTokens.id, installTokenRecord.id));
 
     // Ghi lại hoạt động install

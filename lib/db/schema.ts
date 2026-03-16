@@ -1,22 +1,34 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
+import { pgTable, text, integer, pgEnum, boolean, timestamp } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 
+// Enums
+export const USER_ROLES = ['admin', 'marketing', 'user'] as const;
+export const userRoleEnum = pgEnum('user_role', USER_ROLES);
+export const CAMPAIGN_STATUSES = ['active', 'paused', 'ended'] as const;
+export const campaignStatusEnum = pgEnum('campaign_status', CAMPAIGN_STATUSES);
+export const SOURCE_TYPES = ["facebook", "zalo", "message", "youtube", "instagram", "linkedin", "qr", "post", "news", "partner_app", "partner_website", "refer_code", "other"] as const;
+export const sourceTypesEnum = pgEnum('source_type', SOURCE_TYPES);
+export const CLICK_DEVICE_TYPES = ["ios", "android", "desktop", "other"] as const;
+export const clickDeviceTypeEnum = pgEnum('click_device_type', CLICK_DEVICE_TYPES);
+export const INSTALL_DEVICE_TYPES = ["ios", "android"] as const;
+export const installDeviceTypeEnum = pgEnum('install_device_type', INSTALL_DEVICE_TYPES);
+
 // Users table
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: text("id").primaryKey(),
   phone: text("phone").unique().notNull(),
   email: text("email"),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
-  role: text("role", { enum: ["admin", "marketing", "user"] }).notNull().default("user"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  role: userRoleEnum("role").notNull().default("user"),
+  isActive: boolean("is_active").notNull().default(true),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 })
 
 // Campaigns table
-export const campaigns = sqliteTable("campaigns", {
+export const campaigns = pgTable("campaigns", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
@@ -24,32 +36,30 @@ export const campaigns = sqliteTable("campaigns", {
   promotion: text("promotion"),
   iosLink: text("ios_link"),
   androidLink: text("android_link"),
-  status: text("status", { enum: ["active", "paused", "ended"] }).notNull().default("active"),
+  status: campaignStatusEnum("status").notNull().default("active"),
   createdBy: text("created_by").references(() => users.id, { onDelete: 'set null' }),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 })
 
 // Campaign sources table
-export const campaignSources = sqliteTable("campaign_sources", {
+export const campaignSources = pgTable("campaign_sources", {
   id: text("id").primaryKey(),
   campaignId: text("campaign_id").references(() => campaigns.id, { onDelete: 'cascade' }).notNull(),
-  sourceType: text("source_type", {
-    enum: ["facebook", "zalo", "message", "youtube", "instagram", "linkedin", "qr", "post", "news", "partner_app", "partner_website", "refer_code", "other"]
-  }).notNull(),
+  sourceType: sourceTypesEnum("source_type").notNull(),
   sourceName: text("source_name").notNull(),
   trackingUrl: text("tracking_url").unique().notNull(),
   targetUrl: text("target_url"),
   qrCodeUrl: text("qr_code_url"),
   cost: integer("cost"), // Chi phí cho nguồn này (VD: 5000000)
   costCurrency: text("cost_currency").default("VND"), // Đơn vị tiền tệ
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 })
 
 // Clicks table
-export const clicks = sqliteTable("clicks", {
+export const clicks = pgTable("clicks", {
   id: text("id").primaryKey(),
   campaignId: text("campaign_id").references(() => campaigns.id, { onDelete: 'cascade' }).notNull(),
   sourceId: text("source_id").references(() => campaignSources.id, { onDelete: 'cascade' }).notNull(),
@@ -58,12 +68,12 @@ export const clicks = sqliteTable("clicks", {
   fingerprint: text("fingerprint"), // visitorId từ FingerprintJS
   fingerprintData: text("fingerprint_data"), // JSON string của đối tượng components
   province: text("province"), // Sẽ được bổ sung sau qua Geo-IP
-  deviceType: text("device_type", { enum: ["ios", "android", "desktop", "other"] }),
-  clickedAt: integer("clicked_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  deviceType: clickDeviceTypeEnum("device_type"),
+  clickedAt: timestamp("clicked_at").notNull().defaultNow(),
 })
 
 // Install tokens table
-export const installTokens = sqliteTable("install_tokens", {
+export const installTokens = pgTable("install_tokens", {
   id: text("id").primaryKey(),
   token: text("token").unique().notNull(),
   clickId: text("click_id").references(() => clicks.id, { onDelete: 'set null' }),
@@ -71,45 +81,45 @@ export const installTokens = sqliteTable("install_tokens", {
   sourceId: text("source_id").references(() => campaignSources.id, { onDelete: 'cascade' }).notNull(),
   fingerprint: text("fingerprint"), // JSON string
   deviceInfo: text("device_info"), // JSON string
-  matched: integer("matched", { mode: "boolean" }).notNull().default(false),
-  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  matched: boolean("matched").notNull().default(false),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 })
 
 // Installs table
-export const installs = sqliteTable("installs", {
+export const installs = pgTable("installs", {
   id: text("id").primaryKey(),
   installTokenId: text("install_token_id").references(() => installTokens.id, { onDelete: 'set null' }),
   campaignId: text("campaign_id").references(() => campaigns.id, { onDelete: 'cascade' }).notNull(),
   sourceId: text("source_id").references(() => campaignSources.id, { onDelete: 'cascade' }).notNull(),
-  deviceType: text("device_type", { enum: ["ios", "android"] }).notNull(),
+  deviceType: installDeviceTypeEnum("device_type").notNull(),
   deviceInfo: text("device_info"), // JSON string
   province: text("province"),
-  matched: integer("matched", { mode: "boolean" }).notNull().default(false),
-  installedAt: integer("installed_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  matched: boolean("matched").notNull().default(false),
+  installedAt: timestamp("installed_at").notNull().defaultNow(),
 })
 
 // Activity logs table
-export const activityLogs = sqliteTable("activity_logs", {
+export const activityLogs = pgTable("activity_logs", {
   id: text("id").primaryKey(),
-  userId: text("user_id").references(() => users.id).notNull(),
+  userId: text("user_id").references(() => users.id, { onDelete: 'set null' }),
   action: text("action").notNull(),
   entityType: text("entity_type"),
   entityId: text("entity_id"),
   details: text("details"), // JSON string
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
 // Settings table
-export const settings = sqliteTable("settings", {
+export const settings = pgTable("settings", {
   id: text("id").primaryKey(),
   key: text("key").unique().notNull(),
   value: text("value"), // JSON string
   updatedBy: text("updated_by").references(() => users.id, { onDelete: 'set null' }),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 })
 
 // Relations

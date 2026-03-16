@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Check if phone already exists
     const existing = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.phone, phone),
+      where: (users: { phone: any }, { eq }: any) => eq(users.phone, phone),
     })
 
     if (existing) {

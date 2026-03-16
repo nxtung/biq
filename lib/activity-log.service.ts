@@ -1,7 +1,7 @@
 import 'server-only'
 import { headers } from 'next/headers'
 import { db } from './db'
-import { activityLogs, NewActivityLog } from './db/schema'
+import { activityLogs, type NewActivityLog } from './db/schema'
 import { createId } from '@paralleldrive/cuid2'
 
 // Cho phép `details` là một đối tượng bất kỳ để dễ dàng truyền dữ liệu
@@ -23,7 +23,7 @@ export async function logActivity(payload: LogPayload) {
     await db.insert(activityLogs).values({
       id: createId(),
       // Ánh xạ tường minh từng trường để đảm bảo thứ tự đúng
-      userId: payload.userId,
+      userId: payload.userId ?? null,
       action: payload.action,
       entityType: payload.entityType,
       entityId: payload.entityId,

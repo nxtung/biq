@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     const allSettings = await db.query.settings.findMany()
     
     // Chuyển mảng các cặp {key, value} thành một đối tượng cài đặt duy nhất
-    const settingsObject = allSettings.reduce((acc, setting) => {
+    const settingsObject = allSettings.reduce((acc: { [x: string]: any }, setting: { key: string | number; value: any }) => {
       try {
         // Cố gắng parse JSON cho các giá trị boolean, number,...
         acc[setting.key] = JSON.parse(setting.value || 'null')
@@ -44,30 +44,29 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json()
 
-    // Do hạn chế của driver better-sqlite3 (là synchronous), chúng ta không thể
-    // bọc nhiều thao tác 'upsert' bất đồng bộ trong một transaction nguyên tử.
-    // Thay vào đó, chúng ta sẽ xử lý từng cài đặt một cách riêng lẻ.
-    for (const [key, value] of Object.entries(body)) {
-      const stringValue = JSON.stringify(value)
-      
-      // "Upsert" - Cập nhật nếu đã tồn tại, nếu không thì tạo mới.
-      await db
-        .insert(settings)
-        .values({
-          id: createId(),
-          key,
-          value: stringValue,
-            updatedBy: user.id,
-        })
-        .onConflictDoUpdate({
-          target: settings.key,
-          set: {
+    // Sử dụng transaction để đảm bảo tất cả cài đặt được cập nhật đồng nhất
+    await db.transaction(async (tx: any) => {
+      for (const [key, value] of Object.entries(body)) {
+        const stringValue = JSON.stringify(value)
+        
+        // "Upsert" - Cập nhật nếu đã tồn tại, nếu không thì tạo mới.
+        await tx
+          .insert(settings)
+          .values({
+            id: createId(),
+            key,
             value: stringValue,
+            updatedBy: user.id,
+          })
+          .onConflictDoUpdate({
+            target: settings.key,
+            set: {
+              value: stringValue,
               updatedBy: user.id,
-            updatedAt: new Date(),
-          },
-        })
-    }
+            },
+          })
+      }
+    })
 
     return NextResponse.json({ message: 'Cài đặt đã được lưu' })
   } catch (error) {

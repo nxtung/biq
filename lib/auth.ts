@@ -1,8 +1,8 @@
 import 'server-only'
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
-import { User, users } from './db/schema'
 import { db } from './db'
+import { users, type User } from './db/schema'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 

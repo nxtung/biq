@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { campaignSources } from "@/lib/db/schema"
+import { campaignSources, SOURCE_TYPES } from "@/lib/db/schema"
 import { and, eq } from "drizzle-orm"
 import { z } from "zod"
 
 const updateSourceSchema = z.object({
   sourceName: z.string().min(1, "Tên nguồn là bắt buộc").optional(),
-  sourceType: z.enum(campaignSources.sourceType.enumValues).optional(),
+  sourceType: z.enum(SOURCE_TYPES).optional(),
   targetUrl: z.string().url("Link đích không hợp lệ").nullable().optional(),
   isActive: z.boolean().optional(),
 })
@@ -27,10 +27,7 @@ export async function PUT(
 
     const [updatedSource] = await db
       .update(campaignSources)
-      .set({
-        ...validation.data,
-        updatedAt: new Date(),
-      })
+      .set(validation.data)
       .where(and(eq(campaignSources.id, sourceId), eq(campaignSources.campaignId, campaignId)))
       .returning()
 

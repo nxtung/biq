@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { campaigns, clicks, installs } from "@/lib/db/schema"
+import { campaigns, clicks, installs, CAMPAIGN_STATUSES } from "@/lib/db/schema"
 import { eq, count, desc } from "drizzle-orm"
 import { z } from "zod"
 
 const updateCampaignSchema = z.object({
   name: z.string().min(1, "Tên là bắt buộc").optional(),
   description: z.string().nullable().optional(),
-  eventType: z.string().nullable().optional(),
+  eventType: z.string().nullable().optional(), // Consider making this an enum if possible
   promotion: z.string().nullable().optional(),
-  status: z.enum(["active", "paused", "ended"]).optional(),
+  status: z.enum(CAMPAIGN_STATUSES).optional(),
   iosLink: z.string().url("Link iOS không hợp lệ").nullable().optional(),
   androidLink: z.string().url("Link Android không hợp lệ").nullable().optional(),
 })
@@ -88,7 +88,7 @@ export async function PUT(
 
     const [updatedCampaign] = await db
       .update(campaigns)
-      .set({ ...validation.data, updatedAt: new Date() })
+      .set(validation.data)
       .where(eq(campaigns.id, campaignId))
       .returning()
 
